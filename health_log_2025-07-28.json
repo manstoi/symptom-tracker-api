@@ -1,0 +1,58 @@
+[
+    {
+        "timestamp": "2025-07-28T10:42:13.978078",
+        "data": {
+            "Meals": [
+                "rice and beans for lunch",
+                "shake in the morning",
+                "rice and garbanzo at night"
+            ],
+            "GERD Symptoms": [
+                "colobus",
+                "heartburn"
+            ],
+            "Sleep": "six hours",
+            "Medication": [
+                "20 milligrams of pentoprazole"
+            ],
+            "Notes": [
+                "felt alert the whole night"
+            ]
+        }
+    },
+    {
+        "timestamp": "2025-07-28T10:43:35.498908",
+        "data": {
+            "Meals": [
+                "pizza",
+                "salad",
+                "shake"
+            ],
+            "GERD Symptoms": [
+                "globus",
+                "indigestion"
+            ],
+            "Sleep": "eight hours",
+            "Medication": [
+                "20 milligrams of pentoprazole"
+            ],
+            "Notes": [
+                "felt well most of the day"
+            ]
+        }
+    },
+    {
+        "timestamp": "2025-07-28T10:53:58.696867",
+        "data": {
+            "Meals or Food": "morning shake",
+            "GERD Symptoms": [
+                "heartburn",
+                "globus",
+                "chest pain"
+            ],
+            "Sleep Duration or Quality": null,
+            "Medication": null,
+            "Other Notes": null
+        }
+    }
+]
