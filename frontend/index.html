@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Symptom Tracker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+    }
+    audio {
+      margin-top: 10px;
+    }
+    #result {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>Voice Symptom Tracker</h1>
+  <button id="recordBtn">Start Recording</button>
+  <button id="stopBtn" disabled>Stop Recording</button>
+  <audio id="audioPlayback" controls style="display:none;"></audio>
+  <div id="result"></div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const audioPlayback = document.getElementById("audioPlayback");
+    const resultDiv = document.getElementById("result");
+
+    recordBtn.onclick = async () => {
+      audioChunks = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: "audio/wav" });
+        audioPlayback.src = URL.createObjectURL(blob);
+        audioPlayback.style.display = "block";
+
+        const formData = new FormData();
+        formData.append("audio", blob, "recording.wav");
+
+        resultDiv.textContent = "Uploading and analyzing...";
+        try {
+          const response = await fetch("https://symptom-tracker-api.onrender.com/upload", {
+            method: "POST",
+            body: formData
+          });
+          const data = await response.json();
+          resultDiv.textContent = `Transcript:\n${data.transcript}\n\nParsed:\n${data.parsed_data}\n\nInsights:\n${data.insights}`;
+        } catch (err) {
+          resultDiv.textContent = "Upload failed or server error.";
+        }
+      };
+
+      mediaRecorder.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+    };
+
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+    };
+  </script>
+</body>
+</html>
