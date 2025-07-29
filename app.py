@@ -2,36 +2,48 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import json
-from datetime import datetime 
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from scipy.io.wavfile import write
+from pymongo import MongoClient
 
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=api_key)
+# OpenAI Client
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Flask App
 app = Flask(__name__)
 CORS(app)  # Allow access from any frontend
 
+# MongoDB Connection
+mongo_client = MongoClient(os.getenv("MONGODB_URI"))
+db = mongo_client["symptom_tracker"]
+entries_collection = db["entries"]
+
+# -----------------------------
+# AUDIO TRANSCRIPTION
+# -----------------------------
 def transcribe_audio(filename="input.wav"):
     print(f"Transcribing audio from {filename}...")
     with open(filename, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
+        transcript = openai_client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             response_format="text"
         )
     return transcript
 
+# -----------------------------
+# PARSE TRANSCRIPT WITH GPT
+# -----------------------------
 def parse_transcript(transcript_text):
     print("Parsing transcript with GPT...")
 
     prompt = f"""
     Extract the following information from the user input and return it as a JSON object:
     1. Meals or food mentioned
-    2. GERD, or Gastroesophageal Reflux Disease, symptoms described (such as heartburn, chest pain, etc.)
+    2. GERD symptoms described (such as heartburn, chest pain, etc.)
     3. Sleep duration or quality
     4. Medication mentioned
     5. Any other relevant notes
@@ -41,7 +53,7 @@ def parse_transcript(transcript_text):
     Respond only with the JSON object.
     """
 
-    response = client.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
@@ -50,6 +62,9 @@ def parse_transcript(transcript_text):
     structured_output = response.choices[0].message.content
     return structured_output
 
+# -----------------------------
+# SAVE ENTRY TO MONGODB
+# -----------------------------
 def save_entry(data_str):
     try:
         data = json.loads(data_str)
@@ -57,33 +72,26 @@ def save_entry(data_str):
         print("GPT output was not valid JSON.")
         return
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    filename = f"health_log_{today}.json"
-
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            existing_data = json.load(f)
-    else:
-        existing_data = []
-
     entry = {
         "timestamp": datetime.now().isoformat(),
         "data": data
     }
-    existing_data.append(entry)
 
-    with open(filename, "w") as f:
-        json.dump(existing_data, f, indent=4)
+    # Save to MongoDB
+    entries_collection.insert_one(entry)
+    print("Entry saved to MongoDB.")
 
-    print(f"Entry saved to {filename}")
+# -----------------------------
+# ANALYZE TRENDS FROM MONGODB
+# -----------------------------
+def analyze_trends():
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    entries = list(entries_collection.find({
+        "timestamp": {"$regex": f"^{today_str}"}
+    }))
 
-def analyze_trends(filename):
-    if not os.path.exists(filename):
-        print(f"No data file found: {filename}")
+    if not entries:
         return "No entries found to analyze."
-
-    with open(filename, "r") as f:
-        entries = json.load(f)
 
     logs_text = "\n".join(
         f"{entry['timestamp']} - {entry['data']}" for entry in entries
@@ -103,7 +111,7 @@ def analyze_trends(filename):
     Respond conversationally, but clearly.
     """
 
-    response = client.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.4
@@ -112,6 +120,9 @@ def analyze_trends(filename):
     insights = response.choices[0].message.content
     return insights
 
+# -----------------------------
+# API ROUTES
+# -----------------------------
 @app.route("/upload", methods=["POST"])
 def upload_audio():
     if "audio" not in request.files:
@@ -123,13 +134,22 @@ def upload_audio():
     transcript = transcribe_audio("input.wav")
     parsed_data = parse_transcript(transcript)
     save_entry(parsed_data)
-
-    today = datetime.now().strftime("%Y-%m-%d")
-    filename = f"health_log_{today}.json"
-    insights = analyze_trends(filename)
+    insights = analyze_trends()
 
     return jsonify({
         "transcript": transcript,
         "parsed_data": parsed_data,
         "insights": insights
     })
+
+@app.route("/entries", methods=["GET"])
+def get_entries():
+    """Return all past symptom tracker entries from MongoDB."""
+    entries = list(entries_collection.find({}, {"_id": 0}))
+    return jsonify(entries)
+
+# -----------------------------
+# MAIN
+# -----------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
