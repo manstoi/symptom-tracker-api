@@ -1,3 +1,13 @@
 .env
 __pycache__/
 *.pyc
+
+# Ignore local test files
+app_copy.py
+main_scraper.py
+main.py
+
+# Ignore local data and audio
+*.wav
+*.mp3
+*.json
