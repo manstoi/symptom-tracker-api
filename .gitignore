@@ -1,13 +1,23 @@
-.env
+# Ignore Python cache
 __pycache__/
 *.pyc
 
-# Ignore local test files
-app_copy.py
-main_scraper.py
-main.py
-
-# Ignore local data and audio
+# Ignore audio and large data files
 *.wav
 *.mp3
+*.mp4
 *.json
+*.csv
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore environment files
+.env
+
+# Ignore virtual environments
+venv/
+.venv/
+
+# Ignore Google Cloud SDK folder
+google-cloud-sdk/
