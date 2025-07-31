@@ -6,23 +6,32 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
+import certifi
+import traceback
 
 load_dotenv()
 
+# -----------------------------
 # OpenAI Client
+# -----------------------------
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# -----------------------------
 # Flask App
+# -----------------------------
 app = Flask(__name__)
 CORS(app)  # Allow access from any frontend
 
+# -----------------------------
 # MongoDB Connection
-mongo_client = MongoClient(os.getenv("MONGODB_URI"))
+# -----------------------------
+MONGO_URI = os.getenv("MONGODB_URI")
+mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = mongo_client["symptom_tracker"]
 entries_collection = db["entries"]
 
 # -----------------------------
-# HOME ROUTE (should be first)
+# HOME ROUTE
 # -----------------------------
 @app.route("/", methods=["GET"])
 def home():
@@ -32,12 +41,17 @@ def home():
 # AUDIO TRANSCRIPTION
 # -----------------------------
 def transcribe_audio(filename="input.wav"):
+    size = os.path.getsize(filename)
+    print(f"[DEBUG] Transcribing file: {filename}, size: {size} bytes")
+
     with open(filename, "rb") as audio_file:
         transcript = openai_client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             response_format="text"
         )
+
+    print(f"[DEBUG] Transcript result: {transcript}")
     return transcript
 
 # -----------------------------
@@ -70,6 +84,7 @@ def save_entry(data_str):
     try:
         data = json.loads(data_str)
     except json.JSONDecodeError:
+        print("[DEBUG] Failed to parse JSON from parsed_data")
         return
 
     entry = {
@@ -77,12 +92,13 @@ def save_entry(data_str):
         "data": data
     }
     entries_collection.insert_one(entry)
+    print("[DEBUG] Entry saved to MongoDB.")
 
 # -----------------------------
-# ANALYZE TRENDS
+# ANALYZE TRENDS FROM MONGODB
 # -----------------------------
 def analyze_trends():
-    entries = list(entries_collection.find({}, {"_id": 0}))
+    entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", 1))
     if not entries:
         return "No entries found."
 
@@ -113,30 +129,44 @@ def analyze_trends():
 # -----------------------------
 @app.route("/upload", methods=["POST"])
 def upload_audio():
-    if "audio" not in request.files:
-        return jsonify({"error": "No audio file provided"}), 400
+    try:
+        if "audio" not in request.files:
+            return jsonify({"error": "No audio file provided"}), 400
 
-    audio_file = request.files["audio"]
-    audio_path = "input.wav"
-    audio_file.save(audio_path)
+        # Save uploaded audio temporarily
+        audio_file = request.files["audio"]
+        audio_path = "input.wav"
+        audio_file.save(audio_path)
+        print(f"[DEBUG] Saved audio to {audio_path}, size: {os.path.getsize(audio_path)} bytes")
 
-    transcript = transcribe_audio(audio_path)
-    parsed_data = parse_transcript(transcript)
-    save_entry(parsed_data)
-    insights = analyze_trends()
+        # Process audio
+        transcript = transcribe_audio(audio_path)
+        print(f"[DEBUG] Transcript: {transcript}")
 
-    # Delete the temporary file
-    os.remove(audio_path)
+        parsed_data = parse_transcript(transcript)
+        print(f"[DEBUG] Parsed Data: {parsed_data}")
 
-    return jsonify({
-        "transcript": transcript,
-        "parsed_data": parsed_data,
-        "insights": insights
-    })
+        save_entry(parsed_data)
+
+        insights = analyze_trends()
+        print(f"[DEBUG] Insights: {insights}")
+
+        os.remove(audio_path)
+        print("[DEBUG] Temporary audio file removed.")
+
+        return jsonify({
+            "transcript": transcript,
+            "parsed_data": parsed_data,
+            "insights": insights
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/entries", methods=["GET"])
 def get_entries():
-    entries = list(entries_collection.find({}, {"_id": 0}))
+    entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", -1))
     return jsonify(entries)
 
 # -----------------------------

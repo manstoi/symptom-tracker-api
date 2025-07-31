@@ -1,20 +1,17 @@
-# Use Python slim image for smaller size
+# Use official Python image
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy project files
+COPY . .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your app code
-COPY . .
-
-# Expose Cloud Run default port
+# Expose port (Cloud Run will override, but good practice)
 EXPOSE 8080
 
-# Run with Gunicorn (Cloud Run requirement)
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+# Run the app with Gunicorn for production
+CMD exec gunicorn --bind :8080 --workers 1 --threads 8 --timeout 0 app:app
