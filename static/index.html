@@ -57,7 +57,7 @@
 
         resultDiv.textContent = "Uploading and analyzing...";
         try {
-          const response = await fetch("https://symptom-tracker-api.onrender.com/upload", {
+          const response = await fetch("http://localhost:8080/upload", {
             method: "POST",
             body: formData
           });
