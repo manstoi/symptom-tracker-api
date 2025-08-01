@@ -49,7 +49,6 @@
   <h1>Voice Symptom Tracker</h1>
   <button id="recordBtn">Start Recording</button>
   <button id="stopBtn" disabled>Stop Recording</button>
-  <audio id="audioPlayback" controls style="display:none;"></audio>
 
   <div id="result"></div>
 
@@ -71,7 +70,6 @@
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(audioChunks, { type: "audio/wav" });
-        audioPlayback.src = URL.createObjectURL(blob);
 
         const formData = new FormData();
         formData.append("audio", blob, "recording.wav");
@@ -84,7 +82,7 @@
           });
           const data = await response.json();
 
-          resultDiv.textContent = `Transcript:\n${data.transcript}\n\nInsights:\n${data.insights}`;
+          resultDiv.textContent = `Transcript:\n${data.transcript}`;
         } catch (err) {
           resultDiv.textContent = "Upload failed or server error.";
         }
