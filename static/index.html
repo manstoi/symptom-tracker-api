@@ -98,6 +98,60 @@
       recordBtn.disabled = false;
       stopBtn.disabled = true;
     };
+
+
+
+    // Adding logic for weekly and monthly analysis
+
+    async function checkAndRunAnalysis() {
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+      const dateOfMonth = today.getDate(); // 1 = 1st of month
+
+      console.log(`Today is day ${dayOfWeek} of the week and date ${dateOfMonth} of the month.`);
+
+      // ===== TEST MODE =====
+      const testing = false; // set to true to run regardless of date
+      // =====================
+
+      let endpoint = null;
+
+      if (testing) {
+        endpoint = "/run_weekly_analysis"; // or /run_monthly_analysis for testing
+      } else {
+        // If it's Monday, run weekly analysis
+        if (dayOfWeek === 1) {
+          console.log("Running weekly analysis");
+          endpoint = "/run_weekly_analysis";
+        }
+        // If it's the 1st day of the month, run monthly analysis
+        else if (dateOfMonth === 1) {
+          console.log("Running monthly analysis");
+          endpoint = "/run_monthly_analysis";
+        }
+        else {
+          console.log("No analysis needed today");
+        }
+      }
+
+      // If no endpoint is chosen, stop here
+      if (!endpoint) return;
+
+      // Run analysis
+      document.getElementById("result").textContent = "Running analysis...";
+      try {
+        const res = await fetch(endpoint);
+        const text = await res.text(); // plain text from backend
+        document.getElementById("result").textContent = text;
+      } catch (err) {
+        document.getElementById("result").textContent = "Error running analysis.";
+      }
+    }
+
+
+      // Run when page loads
+      window.addEventListener("load", checkAndRunAnalysis);
+
   </script>
 </body>
 </html>
