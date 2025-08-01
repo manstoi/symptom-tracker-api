@@ -191,6 +191,54 @@ def run_weekly_analysis():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+from flask import Response
+
+@app.route("/run_monthly_analysis", methods=["GET"])
+def run_monthly_analysis():
+    try:
+        now = datetime.now()
+        first_day_of_month = datetime(now.year, now.month, 1)
+
+        entries = list(entries_collection.find({
+            "timestamp": {"$gte": first_day_of_month.isoformat()}
+        }, {"_id": 0}).sort("timestamp", 1))
+
+        if not entries:
+            return Response("No entries found for this month.", mimetype="text/plain")
+
+        prompt = f"""
+        Here is the complete health log for the current month:
+        {entries}
+
+        Please:
+        - Summarize the main trends over the month
+        - Identify recurring triggers or patterns
+        - Note any improvements or worsening over time
+        - Suggest 1–2 actionable recommendations
+        """
+
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+
+        analysis_text = response.choices[0].message.content.strip()
+
+        # Save to Mongo
+        monthly_analysis_collection = db["monthly_analysis"]
+        monthly_analysis_collection.insert_one({
+            "month": now.strftime("%Y-%m"),
+            "analysis": analysis_text,
+            "created_at": now.isoformat()
+        })
+
+        return Response(analysis_text, mimetype="text/plain")
+
+    except Exception as e:
+        return Response(f"Error: {str(e)}", mimetype="text/plain")
+
+
 
 # -----------------------------
 # MAIN
