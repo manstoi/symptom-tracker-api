@@ -94,35 +94,6 @@ def save_entry(data_str):
     entries_collection.insert_one(entry)
     print("[DEBUG] Entry saved to MongoDB.")
 
-# -----------------------------
-# ANALYZE TRENDS FROM MONGODB
-# -----------------------------
-def analyze_trends():
-    entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", 1))
-    if not entries:
-        return "No entries found."
-
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    today_entries = [e for e in entries if e["timestamp"].startswith(today_str)]
-
-    prompt = f"""
-    Here is the complete health log:
-    {entries}
-
-    Today's entries:
-    {today_entries}
-
-    Based on this full history:
-    - Identify recurring patterns or triggers
-    - Note if today's symptoms match past patterns
-    - Suggest 1–2 practical tips for managing symptoms
-    """
-    response = openai_client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.4
-    )
-    return response.choices[0].message.content
 
 # -----------------------------
 # API ROUTES
@@ -148,16 +119,12 @@ def upload_audio():
 
         save_entry(parsed_data)
 
-        insights = analyze_trends()
-        print(f"[DEBUG] Insights: {insights}")
-
         os.remove(audio_path)
         print("[DEBUG] Temporary audio file removed.")
 
         return jsonify({
             "transcript": transcript,
             "parsed_data": parsed_data,
-            "insights": insights
         })
 
     except Exception as e:
