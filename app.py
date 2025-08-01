@@ -2,14 +2,16 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
 import traceback
 
+
 load_dotenv()
+
 
 # -----------------------------
 # OpenAI Client
@@ -131,10 +133,68 @@ def upload_audio():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/entries", methods=["GET"])
 def get_entries():
     entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", -1))
     return jsonify(entries)
+
+
+@app.route("/run_weekly_analysis", methods=["GET"])
+def run_weekly_analysis():
+    try:
+        # 1. Get Monday–Sunday range
+        today = datetime.now()
+        monday = today - timedelta(days=today.weekday())
+        sunday = monday + timedelta(days=6)
+
+        # 2. Query Mongo for entries in that week
+        entries = list(entries_collection.find({
+            "timestamp": {
+                "$gte": monday.isoformat(),
+                "$lte": sunday.isoformat()
+            }
+        }, {"_id": 0}).sort("timestamp", 1))
+
+        if not entries:
+            return jsonify({"message": "No entries found for this week"}), 404
+
+        # 3. Summarize with GPT
+        prompt = f"""
+        Here are the symptom entries for the week of {monday.date()} to {sunday.date()}:
+        {entries}
+
+        Please summarize:
+        - Main trends
+        - Triggers or patterns
+        - Any improvements or worsening
+        - 1–2 actionable suggestions
+        """
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+        analysis_text = response.choices[0].message.content
+
+        # 4. Save to Mongo
+        weekly_collection = db["weekly_analysis"]
+        weekly_collection.insert_one({
+            "week_start": monday.isoformat(),
+            "week_end": sunday.isoformat(),
+            "analysis": analysis_text,
+            "created_at": datetime.now().isoformat()
+        })
+
+        return jsonify({
+            "analysis": analysis.replace("\\n", "\n"),  # clean up the line breaks
+            "message": "Weekly analysis saved"
+        })
+
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # -----------------------------
 # MAIN
