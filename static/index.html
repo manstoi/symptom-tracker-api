@@ -63,7 +63,6 @@
       mediaRecorder.onstop = async () => {
         const blob = new Blob(audioChunks, { type: "audio/wav" });
         audioPlayback.src = URL.createObjectURL(blob);
-        audioPlayback.style.display = "block";
 
         const formData = new FormData();
         formData.append("audio", blob, "recording.wav");
