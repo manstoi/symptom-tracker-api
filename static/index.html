@@ -17,9 +17,6 @@
       margin: 10px;
       cursor: pointer;
     }
-    audio {
-      margin-top: 10px;
-    }
     #result {
       margin-top: 20px;
       white-space: pre-wrap;
@@ -38,11 +35,12 @@
 </head>
 <body>
 
+  <!-- Password protection -->
   <script>
     const pass = prompt("What's the password?");
     if (pass !== "Agora428") {
       alert("Incorrect password.");
-      window.location.href = "about:blank"; // or you could redirect elsewhere
+      window.location.href = "about:blank";
     }
   </script>
 
@@ -58,9 +56,11 @@
 
     const recordBtn = document.getElementById("recordBtn");
     const stopBtn = document.getElementById("stopBtn");
-    const audioPlayback = document.getElementById("audioPlayback");
     const resultDiv = document.getElementById("result");
 
+    // =====================
+    // RECORDING LOGIC
+    // =====================
     recordBtn.onclick = async () => {
       audioChunks = [];
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -83,6 +83,10 @@
           const data = await response.json();
 
           resultDiv.textContent = `Transcript:\n${data.transcript}`;
+
+          // ✅ After upload completes, check if it's a weekly/monthly analysis day
+          await checkAndRunAnalysis();
+
         } catch (err) {
           resultDiv.textContent = "Upload failed or server error.";
         }
@@ -99,14 +103,13 @@
       stopBtn.disabled = true;
     };
 
-
-
-    // Adding logic for weekly and monthly analysis
-
+    // =====================
+    // ANALYSIS LOGIC
+    // =====================
     async function checkAndRunAnalysis() {
       const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
-      const dateOfMonth = today.getDate(); // 1 = 1st of month
+      const dayOfWeek = today.getDay();   // 0 = Sunday, 1 = Monday, ...
+      const dateOfMonth = today.getDate(); // 1 = first day of the month
 
       console.log(`Today is day ${dayOfWeek} of the week and date ${dateOfMonth} of the month.`);
 
@@ -117,41 +120,35 @@
       let endpoint = null;
 
       if (testing) {
-        endpoint = "/run_weekly_analysis"; // or /run_monthly_analysis for testing
+        endpoint = "/run_weekly_analysis"; // or "/run_monthly_analysis" for testing
       } else {
         // If it's Monday, run weekly analysis
         if (dayOfWeek === 1) {
           console.log("Running weekly analysis");
           endpoint = "/run_weekly_analysis";
         }
-        // If it's the 1st day of the month, run monthly analysis
+        // If it's the 1st of the month, run monthly analysis
         else if (dateOfMonth === 1) {
           console.log("Running monthly analysis");
           endpoint = "/run_monthly_analysis";
-        }
-        else {
+        } else {
           console.log("No analysis needed today");
         }
       }
 
-      // If no endpoint is chosen, stop here
-      if (!endpoint) return;
+      if (!endpoint) return; // If no analysis needed, stop here
 
-      // Run analysis
-      document.getElementById("result").textContent = "Running analysis...";
+      resultDiv.textContent += `\n\nRunning analysis...`;
       try {
         const res = await fetch(endpoint);
-        const text = await res.text(); // plain text from backend
-        document.getElementById("result").textContent = text;
+        const text = await res.text();
+        resultDiv.textContent += `\n\n${text}`;
       } catch (err) {
-        document.getElementById("result").textContent = "Error running analysis.";
+        resultDiv.textContent += `\n\nError running analysis.`;
       }
     }
 
-
-      // Run when page loads
-      window.addEventListener("load", checkAndRunAnalysis);
-
+    // ✅ Removed "run on page load" — now analysis only runs after recording is uploaded
   </script>
 </body>
 </html>
