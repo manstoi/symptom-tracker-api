@@ -76,7 +76,7 @@
           });
           const data = await response.json();
 
-          resultDiv.textContent = `Transcript:\n${data.transcript}\n\nParsed:\n${data.parsed_data}\n\nInsights:\n${data.insights}`;
+          resultDiv.textContent = `Transcript:\n${data.transcript}\n\nInsights:\n${data.insights}`;
         } catch (err) {
           resultDiv.textContent = "Upload failed or server error.";
         }
