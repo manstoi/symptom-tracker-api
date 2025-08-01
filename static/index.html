@@ -31,28 +31,7 @@
       border-radius: 8px;
       box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
     }
-    #entries {
-      margin-top: 20px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-    }
-    .entry-card {
-      background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
-    }
-    .entry-date {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .entry-field {
-      margin: 3px 0;
-    }
-    h1, h2 {
+    h1 {
       margin-bottom: 10px;
     }
   </style>
@@ -65,9 +44,6 @@
 
   <div id="result"></div>
 
-  <h2>All Saved Entries</h2>
-  <div id="entries">Loading...</div>
-
   <script>
     let mediaRecorder;
     let audioChunks = [];
@@ -76,41 +52,6 @@
     const stopBtn = document.getElementById("stopBtn");
     const audioPlayback = document.getElementById("audioPlayback");
     const resultDiv = document.getElementById("result");
-    const entriesDiv = document.getElementById("entries");
-
-    // Fetch and display all saved entries
-    async function fetchEntries() {
-      try {
-        const res = await fetch("/entries");
-        const entries = await res.json();
-
-        if (!entries.length) {
-          entriesDiv.textContent = "No entries saved yet.";
-          return;
-        }
-
-        entriesDiv.innerHTML = entries.map(e => {
-          const date = new Date(e.timestamp).toLocaleString();
-          const d = e.data || {};
-
-          return `
-            <div class="entry-card">
-              <div class="entry-date">${date}</div>
-              <div class="entry-field"><strong>Meals:</strong> ${Array.isArray(d["Meals or food mentioned"]) ? d["Meals or food mentioned"].join(", ") : (d["Meals or food mentioned"] || "—")}</div>
-              <div class="entry-field"><strong>Symptoms:</strong> ${Array.isArray(d["GERD symptoms described"]) ? d["GERD symptoms described"].join(", ") : (d["GERD symptoms described"] || "—")}</div>
-              <div class="entry-field"><strong>Sleep:</strong> ${d["Sleep duration or quality"] || "—"}</div>
-              <div class="entry-field"><strong>Medication:</strong> ${d["Medication mentioned"] || "—"}</div>
-              <div class="entry-field"><strong>Notes:</strong> ${d["Any other relevant notes"] || "—"}</div>
-            </div>
-          `;
-        }).join("");
-      } catch (err) {
-        entriesDiv.textContent = "Failed to load entries.";
-      }
-    }
-
-    // Initial load of entries
-    fetchEntries();
 
     recordBtn.onclick = async () => {
       audioChunks = [];
@@ -136,9 +77,6 @@
           const data = await response.json();
 
           resultDiv.textContent = `Transcript:\n${data.transcript}\n\nParsed:\n${data.parsed_data}\n\nInsights:\n${data.insights}`;
-
-          // Refresh entries list after new entry is saved
-          fetchEntries();
         } catch (err) {
           resultDiv.textContent = "Upload failed or server error.";
         }
