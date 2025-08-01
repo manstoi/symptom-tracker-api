@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
@@ -186,11 +186,7 @@ def run_weekly_analysis():
             "created_at": datetime.now().isoformat()
         })
 
-        return jsonify({
-            "analysis": analysis.replace("\\n", "\n"),  # clean up the line breaks
-            "message": "Weekly analysis saved"
-        })
-
+        return Response(analysis_text, mimetype="text/plain")
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
