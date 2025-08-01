@@ -37,6 +37,15 @@
   </style>
 </head>
 <body>
+
+  <script>
+    const pass = prompt("What's the password?");
+    if (pass !== "Agora428") {
+      alert("Incorrect password.");
+      window.location.href = "about:blank"; // or you could redirect elsewhere
+    }
+  </script>
+
   <h1>Voice Symptom Tracker</h1>
   <button id="recordBtn">Start Recording</button>
   <button id="stopBtn" disabled>Stop Recording</button>
