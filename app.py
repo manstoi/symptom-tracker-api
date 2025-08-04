@@ -63,9 +63,9 @@ def parse_transcript(transcript_text):
     prompt = f"""
     Extract the following information from the user input and return it as a JSON object:
     1. Meals or food mentioned
-    2. GERD symptoms described
+    2. GERD symptoms described (Globus, heartburn, acid reflux, etc.)
     3. Sleep duration or quality
-    4. Medication mentioned
+    4. Medication mentioned (pantoprazole, famotidine, etc.)
     5. Any other relevant notes
 
     User input: "{transcript_text}"
@@ -82,7 +82,7 @@ def parse_transcript(transcript_text):
 # -----------------------------
 # SAVE ENTRY TO MONGODB
 # -----------------------------
-def save_entry(data_str):
+def save_entry(transcript_text, data_str):
     try:
         data = json.loads(data_str)
     except json.JSONDecodeError:
@@ -91,6 +91,7 @@ def save_entry(data_str):
 
     entry = {
         "timestamp": datetime.now().isoformat(),
+        "transcript": transcript_text,
         "data": data
     }
     entries_collection.insert_one(entry)
@@ -119,7 +120,7 @@ def upload_audio():
         parsed_data = parse_transcript(transcript)
         print(f"[DEBUG] Parsed Data: {parsed_data}")
 
-        save_entry(parsed_data)
+        save_entry(transcript, parsed_data)
 
         os.remove(audio_path)
         print("[DEBUG] Temporary audio file removed.")
@@ -161,10 +162,15 @@ def run_weekly_analysis():
 
         # 3. Summarize with GPT
         prompt = f"""
-        Here are the symptom entries for the week of {monday.date()} to {sunday.date()}:
+        Here are the full journal entries for the week of {monday.date()} to {sunday.date()}:
+
+        Each entry contains:
+            - The original transcript (free text)
+            - The structured parsed data
+
         {entries}
 
-        Please summarize:
+        Please briefly summarize:
         - Main trends
         - Triggers or patterns
         - Any improvements or worsening
