@@ -17,7 +17,7 @@
       margin: 10px;
       cursor: pointer;
     }
-    #result {
+    #result, #entriesContainer {
       margin-top: 20px;
       white-space: pre-wrap;
       text-align: left;
@@ -30,6 +30,19 @@
     }
     h1 {
       margin-bottom: 10px;
+    }
+    .month-group {
+      margin-bottom: 20px;
+    }
+    .month-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-top: 10px;
+      color: #333;
+    }
+    .entry {
+      margin-left: 10px;
+      margin-top: 5px;
     }
   </style>
 </head>
@@ -47,8 +60,10 @@
   <h1>Voice Symptom Tracker</h1>
   <button id="recordBtn">Start Recording</button>
   <button id="stopBtn" disabled>Stop Recording</button>
+  <button id="viewEntriesBtn">View All Entries</button>
 
   <div id="result"></div>
+  <div id="entriesContainer" style="display:none;"></div>
 
   <script>
     let mediaRecorder;
@@ -57,6 +72,8 @@
     const recordBtn = document.getElementById("recordBtn");
     const stopBtn = document.getElementById("stopBtn");
     const resultDiv = document.getElementById("result");
+    const viewEntriesBtn = document.getElementById("viewEntriesBtn");
+    const entriesContainer = document.getElementById("entriesContainer");
 
     // =====================
     // RECORDING LOGIC
@@ -104,6 +121,52 @@
     };
 
     // =====================
+    // VIEW ENTRIES LOGIC
+    // =====================
+    viewEntriesBtn.onclick = async () => {
+      try {
+        const res = await fetch("/entries");
+        const entries = await res.json();
+        displayEntries(entries);
+      } catch (err) {
+        entriesContainer.style.display = "block";
+        entriesContainer.textContent = "Error loading entries.";
+      }
+    };
+
+    function displayEntries(entries) {
+      entriesContainer.innerHTML = "";
+      entriesContainer.style.display = "block";
+
+      // Group by month
+      const grouped = {};
+      entries.forEach(entry => {
+        const date = new Date(entry.date);
+        const key = date.toLocaleString("default", { month: "long", year: "numeric" });
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(entry);
+      });
+
+      // Render
+      for (const month in grouped) {
+        const monthDiv = document.createElement("div");
+        monthDiv.className = "month-group";
+        monthDiv.innerHTML = `<div class="month-title">${month}</div>`;
+
+        grouped[month].forEach(e => {
+          const date = new Date(e.date).toLocaleDateString();
+          const transcript = e.transcript || "(No transcript)";
+          const entryDiv = document.createElement("div");
+          entryDiv.className = "entry";
+          entryDiv.innerHTML = `<strong>${date}:</strong> ${transcript}`;
+          monthDiv.appendChild(entryDiv);
+        });
+
+        entriesContainer.appendChild(monthDiv);
+      }
+    }
+
+    // =====================
     // ANALYSIS LOGIC
     // =====================
     async function checkAndRunAnalysis() {
@@ -113,22 +176,16 @@
 
       console.log(`Today is day ${dayOfWeek} of the week and date ${dateOfMonth} of the month.`);
 
-      // ===== TEST MODE =====
       const testing = false; // set to true to run regardless of date
-      // =====================
-
       let endpoint = null;
 
       if (testing) {
-        endpoint = "/run_weekly_analysis"; // or "/run_monthly_analysis" for testing
+        endpoint = "/run_weekly_analysis";
       } else {
-        // If it's Monday, run weekly analysis
         if (dayOfWeek === 1) {
           console.log("Running weekly analysis");
           endpoint = "/run_weekly_analysis";
-        }
-        // If it's the 1st of the month, run monthly analysis
-        else if (dateOfMonth === 1) {
+        } else if (dateOfMonth === 1) {
           console.log("Running monthly analysis");
           endpoint = "/run_monthly_analysis";
         } else {
@@ -136,7 +193,7 @@
         }
       }
 
-      if (!endpoint) return; // If no analysis needed, stop here
+      if (!endpoint) return;
 
       resultDiv.textContent += `\n\nRunning analysis...`;
       try {
@@ -147,8 +204,6 @@
         resultDiv.textContent += `\n\nError running analysis.`;
       }
     }
-
-    // ✅ Removed "run on page load" — now analysis only runs after recording is uploaded
   </script>
 </body>
 </html>

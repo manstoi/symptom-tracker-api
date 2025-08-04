@@ -138,6 +138,8 @@ def upload_audio():
 @app.route("/entries", methods=["GET"])
 def get_entries():
     entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+    for entry in entries:
+        entry[" _id"] = str(entry["_id"])
     return jsonify(entries)
 
 
