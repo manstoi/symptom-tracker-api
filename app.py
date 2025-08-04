@@ -53,6 +53,7 @@ def transcribe_audio(filename="input.wav"):
             response_format="text"
         )
 
+    transcript = transcript.strip()
     print(f"[DEBUG] Transcript result: {transcript}")
     return transcript
 
@@ -91,7 +92,7 @@ def save_entry(transcript_text, data_str):
 
     entry = {
         "timestamp": datetime.now().isoformat(),
-        "transcript": transcript_text,
+        "transcript": str(transcript_text) if transcript_text else "",
         "data": data
     }
     entries_collection.insert_one(entry)
