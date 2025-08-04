@@ -2,7 +2,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -91,7 +91,7 @@ def save_entry(transcript_text, data_str):
         return
 
     entry = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc),
         "transcript": str(transcript_text) if transcript_text else "",
         "data": data
     }
@@ -178,16 +178,15 @@ def get_entries():
 @app.route("/run_weekly_analysis", methods=["GET"])
 def run_weekly_analysis():
     try:
-        # 1. Get Monday–Sunday range
-        today = datetime.now()
-        monday = today - timedelta(days=today.weekday())
-        sunday = monday + timedelta(days=6)
+        # 1. Get last 7 days (including today)
+        today = datetime.now(timezone.utc)
+        seven_days_ago = today - timedelta(days=7)
 
         # 2. Query Mongo for entries in that week
         entries = list(entries_collection.find({
             "timestamp": {
-                "$gte": monday.isoformat(),
-                "$lte": sunday.isoformat()
+                "$gte": seven_days_ago,
+                "$lte": today
             }
         }, {"_id": 0}).sort("timestamp", 1))
 
@@ -196,7 +195,7 @@ def run_weekly_analysis():
 
         # 3. Summarize with GPT
         prompt = f"""
-        Here are the full journal entries for the week of {monday.date()} to {sunday.date()}:
+        Here are the full journal entries for the week of {seven_days_ago.date()} to {today.date()}:
 
         Each entry contains:
             - The original transcript (free text)
@@ -220,8 +219,8 @@ def run_weekly_analysis():
         # 4. Save to Mongo
         weekly_collection = db["weekly_analysis"]
         weekly_collection.insert_one({
-            "week_start": monday.isoformat(),
-            "week_end": sunday.isoformat(),
+            "period_start": seven_days_ago,
+            "period_end": today,
             "analysis": analysis_text,
             "created_at": datetime.now().isoformat()
         })
@@ -237,10 +236,13 @@ from flask import Response
 def run_monthly_analysis():
     try:
         now = datetime.now()
-        first_day_of_month = datetime(now.year, now.month, 1)
+        thirty_days_ago = now - timedelta(days=30)
 
         entries = list(entries_collection.find({
-            "timestamp": {"$gte": first_day_of_month.isoformat()}
+            "timestamp": {
+                "$gte": thirty_days_ago,
+                "$lte": now
+            }
         }, {"_id": 0}).sort("timestamp", 1))
 
         if not entries:
