@@ -141,7 +141,7 @@
       // Group by month
       const grouped = {};
       entries.forEach(entry => {
-        const date = new Date(entry.date);
+        const date = new Date(entry.timestamp);
         const key = date.toLocaleString("default", { month: "long", year: "numeric" });
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(entry);
@@ -154,7 +154,7 @@
         monthDiv.innerHTML = `<div class="month-title">${month}</div>`;
 
         grouped[month].forEach(e => {
-          const date = new Date(e.date).toLocaleDateString();
+          const date = new Date(e.timestamp).toLocaleDateString();
           const transcript = e.transcript || "(No transcript)";
           const entryDiv = document.createElement("div");
           entryDiv.className = "entry";

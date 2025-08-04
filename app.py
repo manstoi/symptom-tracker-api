@@ -101,6 +101,25 @@ def save_entry(transcript_text, data_str):
 # -----------------------------
 # API ROUTES
 # -----------------------------
+@app.route("/test-db", methods=["GET"])
+def test_db():
+    try:
+        # Test connection
+        mongo_client.admin.command('ping')
+        
+        # Test collection access
+        count = entries_collection.count_documents({})
+        
+        return jsonify({
+            "status": "connected", 
+            "entry_count": count
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "error": str(e)
+        }), 500
+
 @app.route("/upload", methods=["POST"])
 def upload_audio():
     try:
@@ -137,10 +156,22 @@ def upload_audio():
 
 @app.route("/entries", methods=["GET"])
 def get_entries():
-    entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", -1))
-    for entry in entries:
-        entry[" _id"] = str(entry["_id"])
-    return jsonify(entries)
+    try:
+        print("[DEBUG] Fetching entries from MongoDB...")
+        entries = list(entries_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+        print(f"[DEBUG] Found {len(entries)} entries")
+        
+        # Debug: Print first entry to see format
+        if entries:
+            print(f"[DEBUG] First entry keys: {list(entries[0].keys())}")
+            print(f"[DEBUG] First entry transcript: '{entries[0].get('transcript', 'NOT FOUND')}'")
+            print(f"[DEBUG] Full first entry: {entries[0]}")
+        
+        return jsonify(entries)
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch entries: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/run_weekly_analysis", methods=["GET"])
