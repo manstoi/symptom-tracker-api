@@ -85,7 +85,7 @@ def parse_transcript(transcript_text):
 # -----------------------------
 # SAVE ENTRY TO MONGODB
 # -----------------------------
-def save_entry(transcript_text, data_str):
+def save_entry(transcript_text, data_str, weather_data=None):
     try:
         data = json.loads(data_str)
     except json.JSONDecodeError:
@@ -95,7 +95,8 @@ def save_entry(transcript_text, data_str):
     entry = {
         "timestamp": datetime.now(timezone.utc),
         "transcript": str(transcript_text) if transcript_text else "",
-        "data": data
+        "data": data,
+        "weather": weather_data or {} # Store weather info here
     }
     entries_collection.insert_one(entry)
     print("[DEBUG] Entry saved to MongoDB.")
@@ -128,6 +129,18 @@ def upload_audio():
     try:
         if "audio" not in request.files:
             return jsonify({"error": "No audio file provided"}), 400
+        
+
+        # Get location from frontend if provided
+        lat = request.form.get("lat")
+        lon = request.form.get("lon")
+        print(f"[DEBUG] Received lat: {lat}, lon: {lon}")
+
+        if lat and lon:
+            weather_data = get_weather_by_latlon(lat, lon)
+        else:
+            loc = get_location_from_ip()
+            weather_data = get_weather_by_latlon(loc["lat"], loc["lon"]) if "lat" in loc and "lon" in loc else {}
 
         # Save uploaded audio temporarily
         audio_file = request.files["audio"]
@@ -142,7 +155,7 @@ def upload_audio():
         parsed_data = parse_transcript(transcript)
         print(f"[DEBUG] Parsed Data: {parsed_data}")
 
-        save_entry(transcript, parsed_data)
+        save_entry(transcript, parsed_data, weather_data)
 
         os.remove(audio_path)
         print("[DEBUG] Temporary audio file removed.")
@@ -150,6 +163,7 @@ def upload_audio():
         return jsonify({
             "transcript": transcript,
             "parsed_data": parsed_data,
+            "weather": weather_data
         })
 
     except Exception as e:

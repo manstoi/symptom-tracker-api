@@ -94,6 +94,12 @@
         const formData = new FormData();
         formData.append("audio", blob, "recording.wav");
 
+        if (currentLat && currentLon) {
+          formData.append("lat", currentLat);
+          formData.append("lon", currentLon);
+          console.log(`📍 Sending location: ${currentLat}, ${currentLon}`);
+        } 
+
         resultDiv.textContent = "Uploading and analyzing...";
         try {
           const response = await fetch("/upload", {

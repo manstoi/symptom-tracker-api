@@ -1,5 +1,8 @@
 // static/js/geolocation.js
 
+let currentLat = null;
+let currentLon = null;
+
 function getUserLocationAndFetchWeather() {
   if (!navigator.geolocation) {
     console.error("Geolocation is not supported by your browser.");
@@ -10,13 +13,13 @@ function getUserLocationAndFetchWeather() {
   navigator.geolocation.getCurrentPosition(
     // ✅ Success callback
     function (position) {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
+      currentLat = position.coords.latitude;
+      currentLon = position.coords.longitude;
 
-      console.log(`📍 Browser location: ${lat}, ${lon}`);
+      console.log(`📍 Browser location: ${currentLat}, ${currentLon}`);
 
       // Call your Flask backend with lat/lon
-      fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+      fetch(`/api/weather?lat=${currentLat}&lon=${currentLon}`)
         .then(response => response.json())
         .then(data => {
           console.log("🌦 Weather data:", data);
