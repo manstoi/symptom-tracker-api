@@ -8,6 +8,8 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
 import traceback
+from api.openweather import get_weather_by_latlon
+from api.geolocation import get_location_from_ip
 
 
 load_dotenv()
@@ -280,6 +282,22 @@ def run_monthly_analysis():
     except Exception as e:
         return Response(f"Error: {str(e)}", mimetype="text/plain")
 
+
+@app.route("/api/weather", methods=["GET"])
+def weather():
+    """Get weather from coordinates or fallback to IP location."""
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+
+    if not lat or not lon:
+        # Fallback: use IP-based location
+        loc = get_location_from_ip()
+        if "error" in loc:
+            return jsonify({"error": "Could not detect location"}), 400
+        lat, lon = loc["lat"], loc["lon"]
+
+    weather_data = get_weather_by_latlon(lat, lon)
+    return jsonify(weather_data)
 
 
 # -----------------------------
