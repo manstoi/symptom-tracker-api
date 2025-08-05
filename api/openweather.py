@@ -16,7 +16,7 @@ def get_weather_by_latlon(lat, lon):
         "lat": lat,
         "lon": lon,
         "appid": API_KEY,
-        "units": "metric"  # Celsius; change to 'imperial' for Fahrenheit
+        "units": "imperial"
     }
 
     try:
@@ -27,7 +27,8 @@ def get_weather_by_latlon(lat, lon):
             "temp": data["main"]["temp"],
             "humidity": data["main"]["humidity"],
             "pressure": data["main"]["pressure"],
-            "description": data["weather"][0]["description"]
+            "description": data["weather"][0]["description"],
+            "city": data["name"]
         }
     except requests.RequestException as e:
         return {"error": str(e)}

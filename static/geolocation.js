@@ -58,7 +58,8 @@ function displayWeather(data) {
   }
 
   output.innerHTML = `
-    <strong>Temp:</strong> ${data.temp}°C<br>
+    <strong>Location:</strong> ${data.city}<br>
+    <strong>Temp:</strong> ${data.temp}°F<br>
     <strong>Humidity:</strong> ${data.humidity}%<br>
     <strong>Pressure:</strong> ${data.pressure} hPa<br>
     <strong>Condition:</strong> ${data.description}
