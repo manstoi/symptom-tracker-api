@@ -65,7 +65,15 @@ function displayWeather(data) {
     <strong>Temp:</strong> ${data.temp}°F<br>
     <strong>Humidity:</strong> ${data.humidity}%<br>
     <strong>Pressure:</strong> ${data.pressure} hPa<br>
-    <strong>Condition:</strong> ${data.description}
+    <strong>Condition:</strong> ${data.description}<br>
+    <strong>Air quality:</strong>${data.aqi}<br>
+    (${data.aqi === 1 ? 'Good' : data.aqi === 2 ? 'Fair' : data.aqi === 3 ? 'Moderate' : data.aqi === 4 ? 'Poor' : 'Very Poor'})<br>
+    <strong>Tiny particles (fine dust, smoke, etc):</strong> ${data.pm2_5}<br>
+    (${data.pm2_5 <= 12 ? 'Good' : data.pm2_5 <= 35 ? 'Moderate' : 'Unhealthy'})<br>
+    <strong>Small particles (Dust and pollen):</strong> ${data.pm10}<br>
+    (${data.pm10 <= 20 ? 'Good' : data.pm10 <= 50 ? 'Moderate' : 'Unhealthy'})<br>
+    <strong>Lunar Phase:</strong> ${data.lunar_phase}
+
   `;
 }
 
